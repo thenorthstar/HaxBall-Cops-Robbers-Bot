@@ -8,6 +8,10 @@ var chatFunctions = [getCommands, getDiscord, getStats, setAdmin, setAFK, setBB,
 var languages = ["tr", "en"];
 
 var roomObject = {
+    arrestPoint: {
+        X: JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][0],
+        Y: JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][1],
+    },
     borders: {
         MinX: -755,
         MaxX: 655,
@@ -28,7 +32,7 @@ var roomObject = {
             }
         }
     },
-    collision: false,
+    collision: true,
     commandPrefix: "!",
     discordLink: "https://discord.gg/",
     emojis: ["👀", "👤", "👨‍✈️"],
@@ -151,10 +155,6 @@ var roomObject = {
     teams: ["spectators", "red", "blue"],
     teamsLock: true,
     timeLimit: 3,
-    timers: {
-        gameEndCheck: 0
-    },
-    token: null,
     timeouts: {
         AFK: 900,
         bugging: {
@@ -162,7 +162,12 @@ var roomObject = {
             corner: 180
         }
     },
+    timers: {
+        gameEndCheck: 0
+    },
+    token: null,
     tolerances: {
+        arrest: 0.01,
         bugging: {
             red: {
                 circle: 0,
@@ -213,6 +218,9 @@ var colors = {
         Commands: [0xFFFFFF, 0xFFDB72],
         Discord: 0xFFFFFF,
         Message: [0xFFFFFF, 0xFFDB72],
+        NoAuthorization: {
+            Collision: [0xFF0000, 0xFF0000]
+        },
         NotACommand: 0xFF0000,
         LanguageSwitch: {
             Fail: 0xFFFF00,
@@ -253,6 +261,9 @@ var fonts = {
             Success: "normal"
         },
         Message: ["normal", "bold"],
+        NoAuthorization: {
+            Collision: ["bold", "bold"]
+        },
         NotACommand: "bold",
         Stats: {
             Info: "normal",
@@ -289,6 +300,9 @@ var sounds = {
             Success: 1
         },
         Message: [1, 1],
+        NoAuthorization: {
+            Collision: [2, 2]
+        },
         NotACommand: 2,
         Stats: {
             Info: 1,
@@ -533,15 +547,15 @@ var room = HBInit({ roomName: roomObject.name[roomObject.locale], noPlayer: room
 
 var cf = room.CollisionFlags;
 
-var pushOff_cGroups = [cf.c0, cf.c1];
-var pushOn_cGroups = [cf.red, cf.blue];
-var push_cGroups = [pushOff_cGroups, pushOn_cGroups];
-var cGroups = [pushOff_cGroups, pushOn_cGroups];
+var collisionOff_cGroups = [cf.c0, cf.c1];
+var collisionOn_cGroups = [cf.red, cf.blue];
+var collision_cGroups = [collisionOff_cGroups, collisionOn_cGroups];
+var cGroups = [collisionOff_cGroups, collisionOn_cGroups];
 
-var pushOff_cMasks = [cf.c1, cf.c0];
-var pushOn_cMasks = [cf.blue, cf.red];
-var push_cMasks = [pushOff_cMasks, pushOn_cMasks];
-var cMasks = [pushOff_cMasks, pushOn_cMasks];
+var collisionOff_cMasks = [cf.c1, cf.c0];
+var collisionOn_cMasks = [cf.blue, cf.red];
+var collision_cMasks = [collisionOff_cMasks, collisionOn_cMasks];
+var cMasks = [collisionOff_cMasks, collisionOn_cMasks];
 
 var bias_cMasks = [cf.c2, cf.c3];
 var bias_cGroups = [cf.c2, cf.c3];
@@ -572,7 +586,11 @@ function setAdmin(player, message) {
 function setAFK(player, message) {
     playerList[player.name].afkStatus = !playerList[player.name].afkStatus;
     room.sendAnnouncement(`${locales[playerList[player.name].language].Chat.AFK[Number(playerList[player.name].afkStatus)]}`, player.id, colors.Chat.AFK[Number(playerList[player.name].afkStatus)], fonts.Chat.AFK[Number(playerList[player.name].afkStatus)], sounds.Chat.AFK[Number(playerList[player.name].afkStatus)]);
-    if (playerList[player.name].afkStatus == true) room.setPlayerTeam(player.id, 0);
+    if (playerList[player.name].afkStatus == true){
+        room.setPlayerTeam(player.id, 0);
+        updateAdmins2(player);
+    }
+    equateTeams();
     return false;
 }
 
@@ -612,9 +630,36 @@ function addPlayerTeam(player) {
     playerList[player.name].teams.push(player.team);
 }
 
+function bustingCheck() {
+    if (roomObject.collision == false) {
+        var players = room.getPlayerList().filter(p => room.getPlayerDiscProperties(p.id) != null);
+        for (var i = 0; i < players.length; i++) {
+            for (var j = 0; j < i; j++) {
+                bustPlayerOnArrest(players[j], players[i]);
+            }
+        }
+    }
+}
+
+function bustPlayerOnArrest(p1, p2) {
+    if (roomObject.collision == false) {
+        var players = [p1, p2];
+        if (checkIfArrest(p1, p2) == true) {
+            p1 = players.find(p => p.team == 1);
+            if (room.getPlayerDiscProperties(p1.id) != null) {
+                if (isPlayerAtArrestPoint(p1) == false) {
+                    room.setPlayerDiscProperties(p1.id, { x: JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][0], y: JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][1], xspeed: 0, yspeed: 0 });
+                }
+            }
+        }
+    }
+}
+
 function changeCollisionStatus() {
-    var players = room.getPlayerList().filter(p => room.getPlayerDiscProperties(p.id) != null && room.getPlayerDiscProperties(p.id).cGroup != push_cGroups[Number(roomObject.push)][p.team - 1] && room.getPlayerDiscProperties(p.id).cMask != push_cMasks[Number(roomObject.push)][p.team - 1]);
-    players.forEach(p => room.setPlayerDiscProperties(p.id, { cGroup: push_cGroups[Number(roomObject.push)][p.team - 1] }));
+    var players = room.getPlayerList().filter(p => room.getPlayerDiscProperties(p.id) != null);
+    players.forEach(p => {
+        room.setPlayerDiscProperties(p.id, { cGroup: collision_cGroups[Number(roomObject.collision)][p.team - 1], cMask: collision_cMasks[Number(roomObject.collision)][p.team - 1] });
+    });
 }
 
 function checkForEndGame() {
@@ -675,6 +720,18 @@ function checkForEndGame() {
     }
 }
 
+function checkIfArrest(p1, p2) {
+    return checkIfOpponents(p1, p2) && checkIfTouching(p1, p2);
+}
+
+function checkIfOpponents(p1, p2) {
+    return (p1 != undefined && p2 != undefined) && (p1.id != p2.id) && (p1.team != p2.team);
+}
+
+function checkIfTouching(p1, p2) {
+    return (room.getPlayerDiscProperties(p1.id) != null && room.getPlayerDiscProperties(p2.id) != null) && (pointDistance(room.getPlayerDiscProperties(p1.id), room.getPlayerDiscProperties(p2.id)) < room.getPlayerDiscProperties(p1.id).radius + room.getPlayerDiscProperties(p2.id).radius + roomObject.tolerances.arrest);
+}
+
 function equateTeams() {
     var players = room.getPlayerList().filter(p => playerList[p.name].afkStatus == false);
     var spectators = players.filter(p => p.team == 0);
@@ -695,7 +752,7 @@ function equateTeams() {
             if (Math.abs(reds.length - blues.length) == 1) {
                 var difference2 = reds.length - blues.length;
                 if (spectators.length == 0) {
-                    return;
+                    return false;
                 }
                 else {
                     spectators.forEach(s => {
@@ -715,6 +772,7 @@ function equateTeamsOnJoin() {
     var spectators = players.filter(p => p.team == 0);
     var reds = players.filter(p => p.team == 1);
     var blues = players.filter(p => p.team == 2);
+    var difference = reds.length - blues.length;
 
     if (players.length == 2) {
         if (reds.length == 0 && blues.length == 0) {
@@ -749,7 +807,7 @@ function equateTeamsOnJoin() {
                 if (room.getScores() == null) room.startGame();
             }
             else {
-                equateTeams();
+                Math.sign(difference) == 1 ? room.setPlayerTeam(spectators[0].id,2) : room.setPlayerTeam(spectators[0].id,1);
             }
         }
     }
@@ -825,6 +883,10 @@ function isCommand(player, message) {
 
 function isPlayerAFK(player) {
     return room.getPlayerDiscProperties(player.id) != null && (playerList[player.name].afkTime >= roomObject.timeouts.AFK);
+}
+
+function isPlayerAtArrestPoint(player) {
+    return room.getPlayerDiscProperties(player.id) != null && (room.getPlayerDiscProperties(player.id).x == JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][0] && room.getPlayerDiscProperties(player.id).y == JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][1]);
 }
 
 function isPlayerAtCorner(player) {
@@ -933,8 +995,10 @@ function rollBackOnTeamChange(changedPlayer, byPlayer) {
 }
 
 function startGameOnJoin() {
+    var players = room.getPlayerList().filter(p => playerList[p.name].afkStatus == false);
+    var scores = room.getScores();
     equateTeamsOnJoin();
-    room.startGame();
+    if (scores == null && players.length > 1) room.startGame();
 }
 
 function stopGameOnLeave() {
@@ -1013,27 +1077,32 @@ room.onGamePause = function (byPlayer) {
 room.onGameStart = function (byPlayer) {
     console.log(`${byPlayer == null ? locales[roomObject.locale].Start.Log[Number(byPlayer != null)] : locales[roomObject.locale].Start.Log[Number(byPlayer != null)] + " " + byPlayer.name}`);
     if (byPlayer != null) updatePlayerActivity(byPlayer);
+    changeCollisionStatus();
     resetBuggingTimes();
     updateActivities();
 }
 
 room.onGameStop = function (byPlayer) {
     console.log(`${byPlayer == null ? locales[roomObject.locale].Stop.Log[Number(byPlayer != null)] : locales[roomObject.locale].Stop.Log[Number(byPlayer != null)] + " " + byPlayer.name}`);
+    var players = room.getPlayerList().filter(p => playerList[p.name].afkStatus == false);
     resetBuggingTimes();
     updateActivities();
     if (byPlayer != null) {
         updatePlayerActivity(byPlayer);
     }
     else {
-        swapTeams();
-        equateTeams();
         resetGameEndTimer();
-        room.startGame();
+        if (players.length >= 2) {
+            swapTeams();
+            equateTeams();
+            room.startGame();
+        }
     }
 }
 
 room.onGameTick = function () {
     if (room.getScores() != null && room.getPlayerList().filter(p => p.team == 1).length != 0 && room.getPlayerList().filter(p => p.team == 2).length != 0) {
+        bustingCheck();
         checkForEndGame();
         fillCircles();
         fillGateArea();
