@@ -51,3 +51,4 @@ Before finishing, let's remind some important notes of course:
 
 * Like the previous ones, this bot is also licensed and it's strictly prohibited to sell it by cost and share it anywhere without the author's permission.
 * Some features may not always be added. This means the user should work and do what they want as his own. If so, you can get help from the scripts in the following link whenever you want: https://github.com/thenorthstar/HaxBall-Example-Scripts
+* Some screenshots will be updated soon...
