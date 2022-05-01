@@ -1179,7 +1179,7 @@ room.onGameStop = function(byPlayer) {
         if (players.length >= 2) {
             swapTeams();
             equateTeams();
-            //room.startGame();
+            room.startGame();
         }
     }
 }
@@ -1248,7 +1248,7 @@ room.onPlayerJoin = function(player) {
     if (playerList[player.name] == undefined) {
         playerList[player.name] = { name: player.name, auth: player.auth, conn: player.conn, id: player.id, afkStatus: false, afkTime: 0, buggingTime: 0, language: roomObject.locale, points: 0, teams: [], cops: { wins: 0, losses: 0 }, robbers: { wins: 0, losses: 0 } };
     }
-    else if (playerList[player.name] == undefined) {
+    else if (playerList[player.name] != undefined) {
         playerList[player.name].afkStatus = false;
     }
 
