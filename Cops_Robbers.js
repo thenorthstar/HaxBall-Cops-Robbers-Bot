@@ -7,6 +7,11 @@ var chatFunctions = [getCommands, getDiscord, getStats, setAdmin, setAFK, setBB,
 
 var languages = ["tr", "en"];
 
+var badwords = {
+    tr: [/[a4@][./]m[./][gkq]+/, /[a4@]hm[a4@][gğk]+/, /[a4@]mc[ıi1][gğk]+/, /[a4@]m[ı1]n+/, /[a4@]m[kq]+/, /[a4@]ngu[t₺]+/, /[a4@]n[a4@][ns$5]+/, /[a4@]nn[e€][s$5][ıi1]+/, /[a4@][bp][t₺][a4@][l1]+/, /[a4@]q+/, /[a4@][t₺][a4@]pu[t₺]+/, /[bß][a4@][bß][a4@]n+/, /[bß][o0]k+/, /d[a4@][l1][l1][a4@]m[a4@]+/, /d[a4@]ng[a4@][l1][a4@][gğkq]+/, /[e€][bß][e€][ns$5]+/, /f[a4@]h[ıi1][sş$5][e€]+/, /g[e€]r[ıi1]z[e€]k[a4@]+/, /g[a4@]v[a4@][t₺]+/, /[cg][oö0][t₺][uü][mn]+/, /[cg][oö0][t₺]v[e€]r[e€]n+/, /h[a4@][s$5][s$5][ıi1]k[t₺][ıi1]r+/, /[ıi1][bp]n[e€]+/, /k[a4@]f[ıi1]r+/, /k[a4@]h[bpß][e€]+/, /k[a4@]n[c¢][ıi1]k/, /k[e€]r[ıi1]z+/, /k[e€]v[a4@][sş$5][e€]+/, /[l1][a4@]vu[gğk]+/, /m[./][gkq]+/, /m[o0]r[o0]n+/, /n[o0]n[o0][sş$5]+/, /[o0][./][cç¢]+/, /[o0][cç¢]+/, /[o0][rvw][o0][sş$5][bpß][ıiou]+/, /p[e€]z[e€]v[e€]n[gkq]+/, /p[ıi1][cçj¢]+/, /pu[sş$5][t₺]+/, /s.g+/, /[s$5][a4@][l1][a4@][gğk]+/, /[sşz$5][ıi1!]k[eıikmt₺1]+/, /[sşz$5]+2+[ikmşy]+/, /[sş$5][e€]r[e€]f[sş$5][ıi1]z+/, /[t₺][a4@][sş$5][a4@]k+/, /[t₺][a4@][sş$5][sş$5][a4@]k+/, /v[a4@][l1][ıi1]d[e€][ns]+/, /[y7][a4@]r[a4@][gğkmq]+/, /[y7][a4@]rr[a4@][gğkmq]+/, /[y7][a4@][uv][sş$5][a4@][gğk]+/, /[y7][o0][sş$5]m[a4@]+/],
+    en: [/[a4@][s$5][s$5]h[o0][l1][e€]+/, /[bß][a4@]rm[iy7]+/, /[bß][a4@][s$5][t₺][a4@]rd+/, /[bß][ıi1][t₺][cç¢]h+/, /[c¢]un[t₺]+/, /f[uü][cç¢]k+/, /[l1]m[a4@][o0]+/, /[l1]mf[a4@][o0]+/, /pu[s5$][s5$][y7]+/, /r[e€][t₺][a4@]rd+/, /[s$5][t₺]fu+/, /wh[o0]r[e€]+/, /w[t₺]f+/]
+};
+
 var roomObject = {
     arrestPoint: {
         X: JMap.redSpawnPoints[JMap.redSpawnPoints.length - 1][0],
@@ -168,6 +173,7 @@ var roomObject = {
     token: null,
     tolerances: {
         arrest: 0.01,
+        badwords: 2,
         bugging: {
             red: {
                 circle: 0,
@@ -345,6 +351,7 @@ var kickTypes = {
         },
         Names: {
             Badwords: true,
+            Improper: false,
             Length: false
         }
     },
@@ -362,7 +369,10 @@ var locales = {
         },
         Chat: {
             AFK: ["AFK değilsiniz!", "AFK oldunuz!"],
-            Badwords: "Odamızda küfür/hakaret içerikli kelimeler kullanmak yasaktır. Tekrar etmeniz hâlinde banlanacaksınız!",
+            Badwords: {
+                Kick: "Odamızda küfür/hakaret içerikli kelimeler kullanmak yasaktır.",
+                Warning: "Odamızda küfür/hakaret içerikli kelimeler kullanmak yasaktır. Tekrar etmeniz hâlinde banlanacaksınız!",
+            },
             Collision: ["Çarpışma özelliği kapatıldı!", "Çarpışma özelliği açıldı!"],
             Commands: ["Kullanılabilir komutlar: !admin, !afk, !bb, !dc, !dil [Dil kodu], !discord, !istatistikler, !komutlar", "Kullanılabilir komutlar: !admin, !afk, !bb, !çarpışma, !dc, !dil [Dil kodu], !discord, !istatistikler, !komutlar"],
             Discord: `Discord adresimiz: ${roomObject.discordLink}`,
@@ -398,6 +408,7 @@ var locales = {
             },
             Names: {
                 Badwords: "Odamıza küfür/hakaret içerikli isimlerle giriş yapmak yasaktır.",
+                Improper: "İsminizin sağında/solunda boşluk karakteri bulunamaz ve isminiz çifte boşluk karakteri içeremez.",
                 Length: {
                     Min: `İsminiz en az ${roomObject.join.names.length.min} karakterli olmalıdır.`,
                     Max: `İsminiz en fazla ${roomObject.join.names.length.max} karakterli olmalıdır.`
@@ -459,7 +470,10 @@ var locales = {
         },
         Chat: {
             AFK: ["You are now with us!", "You are now AFK!"],
-            Badwords: "It's strictly prohibited to use bad words in this room. Please remember that a further attempt will result in ban.",
+            Badwords: {
+                Kick: "It's strictly prohibited to use bad words in this room.",
+                Warning: "It's strictly prohibited to use bad words in this room. Please remember that a further attempt will result in ban.",
+            },
             Collision: ["Collision is now turned off!", "Collision is now turned on!"],
             Commands: ["Available commands: !admin, !afk, !bb, !commands, !dc, !discord, !lang [Code], !stats", "Kullanılabilir komutlar: !admin, !afk, !bb, !collision, !commands, !dc, !discord, !lang [Code], !stats"],
             Discord: `Our discord server: ${roomObject.discordLink}`,
@@ -496,6 +510,7 @@ var locales = {
             },
             Names: {
                 Badwords: "Bad name.",
+                Improper: "Names start or end with blank character or contain duplicated blank character are not allowed in this room!",
                 Length: {
                     Min: `Your name should have ${roomObject.join.names.length.min} characters at least.`,
                     Max: `Your name should have ${roomObject.join.names.length.max} characters at most.`
@@ -961,8 +976,30 @@ function increaseBuggingTime() {
     players.forEach(p => playerList[p.name].buggingTime++);
 }
 
+function isBadword(player, message) {
+    return badwords[playerList[player.name].language].filter(b => message.toLowerCase().match(b)).length > 0;
+}
+
+function isBadword2(player, message) {
+    return badwords[roomObject.locale].filter(b => message.toLowerCase().match(b)).length > 0;
+}
+
 function isCommand(player, message) {
     return commands[playerList[player.name].language][message] != null || commands[playerList[player.name].language][message.split(" ")[0]] != null;
+}
+
+function isDuplicated(player) {
+    var players = room.getPlayerList().filter(p => p.id != player.id);
+    var duplicatedName = players.find(p => p.name == player.name);
+    var duplicatedAuth = players.find(p => playerList[p.name].auth == player.auth);
+    var duplicatedConn = players.find(p => playerList[p.name].conn == player.conn);
+
+    if (duplicatedName) room.kickPlayer(`${locales[roomObject.locale].Join.Duplicated.Name}`, player.id, kickTypes.Join.Duplicated.Name);
+    if (duplicatedAuth || duplicatedConn) room.kickPlayer(`${locales[roomObject.locale].Join.Duplicated.Account}`, player.id, kickTypes.Join.Duplicated.Account);
+}
+
+function isImproper(string) {
+    return string.startsWith(" ") == true || string.endsWith(" ") == true || string.includes("  ") == true;
 }
 
 function isPlayerAFK(player) {
@@ -1011,6 +1048,10 @@ function isPlayerOnGate(player) {
     return room.getPlayerDiscProperties(player.id) != null && player.team == 2 && (roomObject.prohibitedPoints.blue.gate.MinX <= room.getPlayerDiscProperties(player.id).x && room.getPlayerDiscProperties(player.id).x <= roomObject.prohibitedPoints.blue.gate.MaxX && roomObject.prohibitedPoints.blue.gate.MinY <= room.getPlayerDiscProperties(player.id).y && room.getPlayerDiscProperties(player.id).y <= roomObject.prohibitedPoints.blue.gate.MaxY);
 }
 
+function isTooShortOrLong(string) {
+    return string.length < roomObject.join.names.length.min || roomObject.join.names.length.max < string.length;
+}
+
 function kickAFK() {
     var players = room.getPlayerList().filter(p => room.getPlayerDiscProperties(p.id) != null && isPlayerAFK(p) == true);
 
@@ -1033,6 +1074,24 @@ function kickBugging_Corner() {
     players.forEach(p => {
         room.kickPlayer(p.id, `${locales[playerList[p.name].language].Tick.Bugging.Corner.Kick}`, kickTypes.Tick.Bugging);
     });
+}
+
+function kickIfBadword(player) {
+    if (isBadword2(player, player.name) == true) {
+        room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Names.Badwords}`, kickTypes.Join.Names.Badwords);
+    }
+}
+
+function kickIfDuplicated(player) {
+    if (isDuplicated(player) == true) {
+        room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Names.Duplicated}`, kickTypes.Join.Names.Duplicated);
+    }
+}
+
+function kickIfImproper(player) {
+    if (isImproper(player, player.name) == true) {
+        room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Names.Improper}`, kickTypes.Join.Names.Improper);
+    }
 }
 
 function pointDistance(p1, p2) {
@@ -1135,6 +1194,20 @@ function warnIfAFK() {
     });
 }
 
+function warnIfBadword(player, message) {
+    if (isBadword(player, message) == true) {
+        if (playerList[player.name].badwords < roomObject.tolerances.badwords) {
+            playerList[player.name].badwords++;
+            room.sendAnnouncement(`${locales[playerList[player.name].language].Chat.Badwords.Warning}`, player.id, colors.Chat.Badwords, fonts.Chat.Badwords, sounds.Chat.Badwords);
+            return false;
+        }
+        else {
+            room.kickPlayer(player.id, `${locales[playerList[player.name].language].Chat.Badwords}`, kickTypes.Chat.Badwords);
+            return false;
+        }
+    }
+}
+
 function warnIfBuggingInCircle() {
     var players = room.getPlayerList().filter(p => room.getPlayerDiscProperties(p.id) != null && isPlayerInCircle(p) == true && (roomObject.timeouts.bugging.circle / 2 <= playerList[p.name].buggingTime && playerList[p.name].buggingTime <= roomObject.timeouts.bugging.circle / 2 + 1 / 60));
 
@@ -1151,14 +1224,14 @@ function warnIfBuggingAtCorner() {
     });
 }
 
-room.onGamePause = function(byPlayer) {
+room.onGamePause = function (byPlayer) {
     roomObject.gamePauseState = !roomObject.gamePauseState;
     console.log(`${byPlayer == null ? locales[roomObject.locale].Pause.Log[Number(byPlayer == null)] : locales[roomObject.locale].Pause.Log[Number(byPlayer == null)] + " " + byPlayer.name}`);
     if (byPlayer != null) updatePlayerActivity(byPlayer);
     updateActivities();
 }
 
-room.onGameStart = function(byPlayer) {
+room.onGameStart = function (byPlayer) {
     console.log(`${byPlayer == null ? locales[roomObject.locale].Start.Log[Number(byPlayer != null)] : locales[roomObject.locale].Start.Log[Number(byPlayer != null)] + " " + byPlayer.name}`);
     if (byPlayer != null) updatePlayerActivity(byPlayer);
     changeCollisionStatus();
@@ -1166,7 +1239,7 @@ room.onGameStart = function(byPlayer) {
     updateActivities();
 }
 
-room.onGameStop = function(byPlayer) {
+room.onGameStop = function (byPlayer) {
     console.log(`${byPlayer == null ? locales[roomObject.locale].Stop.Log[Number(byPlayer != null)] : locales[roomObject.locale].Stop.Log[Number(byPlayer != null)] + " " + byPlayer.name}`);
     var players = room.getPlayerList().filter(p => playerList[p.name].afkStatus == false);
     resetBuggingTimes();
@@ -1184,7 +1257,7 @@ room.onGameStop = function(byPlayer) {
     }
 }
 
-room.onGameTick = function() {
+room.onGameTick = function () {
     if (room.getScores() != null && room.getPlayerList().filter(p => p.team == 1).length != 0 && room.getPlayerList().filter(p => p.team == 2).length != 0) {
         bustingCheck();
         checkForEndGame();
@@ -1202,18 +1275,18 @@ room.onGameTick = function() {
     warnIfAFK();
 }
 
-room.onGameUnpause = function(byPlayer) {
+room.onGameUnpause = function (byPlayer) {
     roomObject.gamePauseState = !roomObject.gamePauseState;
     console.log(`${byPlayer == null ? locales[roomObject.locale].Unpause.Log[Number(byPlayer != null)] : locales[roomObject.locale].Unpause.Log[Number(byPlayer != null)] + " " + byPlayer.name}`);
     if (byPlayer != null) updatePlayerActivity(byPlayer);
     updateActivities();
 }
 
-room.onPlayerActivity = function(player) {
+room.onPlayerActivity = function (player) {
     updatePlayerActivity(player);
 }
 
-room.onPlayerAdminChange = function(changedPlayer, byPlayer) {
+room.onPlayerAdminChange = function (changedPlayer, byPlayer) {
     console.log(`${changedPlayer.name} ${byPlayer == null ? locales[roomObject.locale].AdminChange.Log[Number(byPlayer != null)][Number(changedPlayer.admin)] : locales[roomObject.locale].AdminChange.Log[Number(byPlayer != null)][Number(changedPlayer.admin)] + " " + byPlayer.name}`);
     if (byPlayer != null) {
         rollBackOnAdminChange(changedPlayer, byPlayer);
@@ -1222,31 +1295,38 @@ room.onPlayerAdminChange = function(changedPlayer, byPlayer) {
     }
 }
 
-room.onPlayerChat = function(player, message) {
+room.onPlayerChat = function (player, message) {
     console.log(`${player.name}: ${message}`);
     updatePlayerActivity(player);
 
     if (message.startsWith(roomObject.commandPrefix) == true) {
         if (isCommand(player, message) == true) {
+            warnIfBadword(player, message);
             commands[playerList[player.name].language][message.split(" ")[0]](player, message);
             return false;
         }
         else {
+            warnIfBadword(player, message);
             room.sendAnnouncement(`${locales[playerList[player.name].language].Chat.NotACommand}`, player.id, colors.Chat.NotACommand, fonts.Chat.NotACommand, sounds.Chat.NotACommand);
             return false;
         }
     }
     else {
+        warnIfBadword(player, message);
         room.sendAnnouncement(`${roomObject.emojis[player.team]} [${playerList[player.name].points}] [${roomObject.playerStatus[Number(player.admin)]}] ${player.name} #${player.id}: ${message}`, player.id, colors.Chat.Message[Number(player.admin)], fonts.Chat.Message[Number(player.admin)], sounds.Chat.Message[Number(player.admin)]);
         return false;
     }
 }
 
-room.onPlayerJoin = function(player) {
+room.onPlayerJoin = function (player) {
     console.log(`${player.name} ${locales[roomObject.locale].Join.Log.Success}`);
 
+    kickIfBadword(player);
+    kickIfDuplicated(player);
+    kickIfImproper(player.name);
+
     if (playerList[player.name] == undefined) {
-        playerList[player.name] = { name: player.name, auth: player.auth, conn: player.conn, id: player.id, afkStatus: false, afkTime: 0, buggingTime: 0, language: roomObject.locale, points: 0, teams: [], cops: { wins: 0, losses: 0 }, robbers: { wins: 0, losses: 0 } };
+        playerList[player.name] = { name: player.name, auth: player.auth, conn: player.conn, id: player.id, afkStatus: false, afkTime: 0, badwords: 0, buggingTime: 0, language: roomObject.locale, points: 0, teams: [], cops: { wins: 0, losses: 0 }, robbers: { wins: 0, losses: 0 } };
     }
     else if (playerList[player.name] != undefined) {
         playerList[player.name].afkStatus = false;
@@ -1258,13 +1338,13 @@ room.onPlayerJoin = function(player) {
     startGameOnJoin();
 }
 
-room.onPlayerKicked = function(kickedPlayer, reason, ban, byPlayer) {
+room.onPlayerKicked = function (kickedPlayer, reason, ban, byPlayer) {
     console.log(`${kickedPlayer.name} ${byPlayer == null ? locales[roomObject.locale].Kick.Log[Number(byPlayer != null)][Number(ban)] : locales[roomObject.locale].Kick.Log[Number(byPlayer != null)][Number(ban)] + " " + byPlayer.name} ${reason == null ? "" : "(" + reason + ")"}`);
     if (byPlayer != null) updatePlayerActivity(byPlayer);
     updatePlayerActivity(kickedPlayer);
 }
 
-room.onPlayerLeave = function(player) {
+room.onPlayerLeave = function (player) {
     console.log(`${player.name} ${locales[roomObject.locale].Leave.Log}`);
     updateAdmins();
     updatePlayerActivity(player);
@@ -1272,13 +1352,13 @@ room.onPlayerLeave = function(player) {
     stopGameOnLeave();
 }
 
-room.onPositionsReset = function() {
+room.onPositionsReset = function () {
     console.log(`${locales[roomObject.locale].Reset.Log}`);
     resetBuggingTimes();
     updateActivities();
 }
 
-room.onPlayerTeamChange = function(changedPlayer, byPlayer) {
+room.onPlayerTeamChange = function (changedPlayer, byPlayer) {
     console.log(`${changedPlayer.name} ${byPlayer == null ? locales[roomObject.locale].TeamChange.Log[changedPlayer.team][Number(byPlayer != null)] : locales[roomObject.locale].TeamChange.Log[changedPlayer.team][Number(byPlayer != null)] + " " + byPlayer.name}`);
 
     if (changedPlayer.team != 0 && playerList[changedPlayer.name].afkStatus == true) {
@@ -1292,7 +1372,7 @@ room.onPlayerTeamChange = function(changedPlayer, byPlayer) {
     addPlayerTeam(changedPlayer);
 }
 
-room.onRoomLink = function(url) {
+room.onRoomLink = function (url) {
     if (roomObject.isRoomSet == false) {
         room.setCustomStadium(Map);
         room.setScoreLimit(roomObject.scoreLimit);
@@ -1303,7 +1383,7 @@ room.onRoomLink = function(url) {
     }
 }
 
-room.onStadiumChange = function(newStadiumName, byPlayer) {
+room.onStadiumChange = function (newStadiumName, byPlayer) {
     console.log(`${newStadiumName} ${byPlayer == null ? locales[roomObject.locale].StadiumChange.Log[Number(byPlayer != null)] : locales[roomObject.locale].StadiumChange.Log[Number(byPlayer != null)] + " " + byPlayer.name}`);
     if (byPlayer != null) {
         updatePlayerActivity(byPlayer);
