@@ -154,7 +154,7 @@ var roomObject = {
             }
         }
     },
-    public: false,
+    public: true,
     recaptcha: false,
     scoreLimit: 0,
     teams: ["spectators", "red", "blue"],
