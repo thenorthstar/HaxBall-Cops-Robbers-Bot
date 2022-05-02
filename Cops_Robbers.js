@@ -994,8 +994,12 @@ function isDuplicated(player) {
     var duplicatedAuth = players.find(p => playerList[p.name].auth == player.auth);
     var duplicatedConn = players.find(p => playerList[p.name].conn == player.conn);
 
-    if (duplicatedName) room.kickPlayer(`${locales[roomObject.locale].Join.Duplicated.Name}`, player.id, kickTypes.Join.Duplicated.Name);
-    if (duplicatedAuth || duplicatedConn) room.kickPlayer(`${locales[roomObject.locale].Join.Duplicated.Account}`, player.id, kickTypes.Join.Duplicated.Account);
+    var result = { isDuplicatedName: false, isDuplicatedAccount: false };
+
+    if (duplicatedName && result.isDuplicatedName == false) result.isDuplicatedName = true;
+    if ((duplicatedAuth || duplicatedConn) && result.isDuplicatedAccount == false) result.isDuplicatedAccount = true;
+
+    return result;
 }
 
 function isImproper(string) {
@@ -1083,13 +1087,16 @@ function kickIfBadword(player) {
 }
 
 function kickIfDuplicated(player) {
-    if (isDuplicated(player) == true) {
-        room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Names.Duplicated}`, kickTypes.Join.Names.Duplicated);
+    if (isDuplicated(player).isDuplicatedAccount == true) {
+        room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Duplicated.Account}`, kickTypes.Join.Duplicated.Account);
+    }
+    else if (isDuplicated(player).isDuplicatedName == true) {
+        room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Duplicated.Name}`, kickTypes.Join.Duplicated.Name);
     }
 }
 
 function kickIfImproper(player) {
-    if (isImproper(player, player.name) == true) {
+    if (isImproper(player.name) == true) {
         room.kickPlayer(player.id, `${locales[roomObject.locale].Join.Names.Improper}`, kickTypes.Join.Names.Improper);
     }
 }
@@ -1202,7 +1209,7 @@ function warnIfBadword(player, message) {
             return false;
         }
         else {
-            room.kickPlayer(player.id, `${locales[playerList[player.name].language].Chat.Badwords}`, kickTypes.Chat.Badwords);
+            room.kickPlayer(player.id, `${locales[playerList[player.name].language].Chat.Badwords.Kick}`, kickTypes.Chat.Badwords);
             return false;
         }
     }
@@ -1323,7 +1330,7 @@ room.onPlayerJoin = function (player) {
 
     kickIfBadword(player);
     kickIfDuplicated(player);
-    kickIfImproper(player.name);
+    kickIfImproper(player);
 
     if (playerList[player.name] == undefined) {
         playerList[player.name] = { name: player.name, auth: player.auth, conn: player.conn, id: player.id, afkStatus: false, afkTime: 0, badwords: 0, buggingTime: 0, language: roomObject.locale, points: 0, teams: [], cops: { wins: 0, losses: 0 }, robbers: { wins: 0, losses: 0 } };
