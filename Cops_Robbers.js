@@ -3,7 +3,7 @@ var Map = `{"name":"Cops and Robbers","width":830,"height":600,"spawnDistance":2
 var JMap = JSON.parse(Map);
 
 var playerList = {};
-var chatFunctions = [getCommands, getDiscord, getStats, setAdmin, setAFK, setBB, setCollision, setLanguage]; //A function must correspond a command
+var chatFunctions = [getCommands, getDiscord, getStats, setAdmin, setAFK, setBB, setCollision, setLanguage];
 
 var languages = ["tr", "en"];
 
